@@ -44,8 +44,12 @@
         .btn:hover {
             background-color: #0056b3;
         }
-        .difficulty {
+        .options {
             margin: 20px;
+        }
+        .options label {
+            display: block;
+            margin-bottom: 5px;
         }
     </style>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.4.0/jspdf.umd.min.js"></script>
@@ -53,10 +57,15 @@
 <body>
     <h1>Sudoku Generator</h1>
     <div class="container">
-        <div class="difficulty">
-            <label for="difficulty">Select Difficulty: </label>
-            <input type="range" id="difficulty" min="1" max="100" value="50">
-            <span id="difficulty-value">50%</span>
+        <div class="options">
+            <label for="difficulty-start">Start Difficulty (%):</label>
+            <input type="number" id="difficulty-start" min="1" max="100" value="20">
+            
+            <label for="difficulty-end">End Difficulty (%):</label>
+            <input type="number" id="difficulty-end" min="1" max="100" value="80">
+            
+            <label for="sudoku-count">Number of Sudokus:</label>
+            <input type="number" id="sudoku-count" min="1" value="10">
         </div>
         <table id="sudoku-grid"></table>
         <button class="btn" onclick="generateIncompleteSudoku()">Generate Puzzle</button>
@@ -135,7 +144,7 @@
             solutionGrid = generateSudoku();
             puzzleGrid = JSON.parse(JSON.stringify(solutionGrid));
 
-            const difficulty = document.getElementById("difficulty").value / 100;
+            const difficulty = document.getElementById("difficulty-start").value / 100;
             const cellsToRemove = Math.floor(difficulty * GRID_SIZE * GRID_SIZE);
 
             let removed = 0;
@@ -172,17 +181,40 @@
             const { jsPDF } = window.jspdf;
             const doc = new jsPDF();
 
-            const puzzlesCount = 5;
-            for (let i = 0; i < puzzlesCount; i++) {
-                const difficulty = document.getElementById("difficulty").value;
-                generateIncompleteSudoku();
-                drawSudoku(doc, puzzleGrid, 10, 10, `Puzzle ${i + 1} - Difficulty: ${difficulty}%`);
+            const startDifficulty = parseInt(document.getElementById("difficulty-start").value);
+            const endDifficulty = parseInt(document.getElementById("difficulty-end").value);
+            const sudokuCount = parseInt(document.getElementById("sudoku-count").value);
+            const difficultyStep = (endDifficulty - startDifficulty) / (sudokuCount - 1);
+
+            for (let i = 0; i < sudokuCount; i++) {
+                const difficulty = startDifficulty + i * difficultyStep;
+
+                generatePuzzleWithDifficulty(difficulty / 100);
+
+                drawSudoku(doc, puzzleGrid, 10, 10, `Puzzle ${i + 1} - Difficulty: ${Math.round(difficulty)}%`);
                 doc.addPage();
                 drawSudoku(doc, solutionGrid, 10, 10, `Solution for Puzzle ${i + 1}`);
-                if (i < puzzlesCount - 1) doc.addPage();
+                if (i < sudokuCount - 1) doc.addPage();
             }
 
             doc.save("SudokuBooklet.pdf");
+        }
+
+        function generatePuzzleWithDifficulty(difficulty) {
+            solutionGrid = generateSudoku();
+            puzzleGrid = JSON.parse(JSON.stringify(solutionGrid));
+
+            const cellsToRemove = Math.floor(difficulty * GRID_SIZE * GRID_SIZE);
+
+            let removed = 0;
+            while (removed < cellsToRemove) {
+                const row = Math.floor(Math.random() * GRID_SIZE);
+                const col = Math.floor(Math.random() * GRID_SIZE);
+                if (puzzleGrid[row][col] !== 0) {
+                    puzzleGrid[row][col] = 0;
+                    removed++;
+                }
+            }
         }
 
         function drawSudoku(doc, grid, startX, startY, title) {
@@ -206,12 +238,6 @@
                 }
             }
         }
-
-        const difficultySlider = document.getElementById("difficulty");
-        const difficultyValue = document.getElementById("difficulty-value");
-        difficultySlider.addEventListener("input", () => {
-            difficultyValue.textContent = `${difficultySlider.value}%`;
-        });
 
         createEmptyGrid();
     </script>

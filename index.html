@@ -1,0 +1,96 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sudoku Generator</title>
+    <style>
+        /* Styles pour la grille de Sudoku */
+        body {
+            font-family: Arial, sans-serif;
+            text-align: center;
+            margin: 0;
+            padding: 0;
+            background-color: #f4f4f9;
+        }
+        .container {
+            margin: 20px auto;
+            width: 300px;
+        }
+        table {
+            border-collapse: collapse;
+            margin: 20px auto;
+            width: 100%;
+        }
+        td {
+            border: 1px solid #000;
+            width: 33px;
+            height: 33px;
+            text-align: center;
+            font-size: 18px;
+            background-color: #fff;
+        }
+        .subgrid-border {
+            border-width: 2px;
+        }
+        .btn {
+            margin: 20px;
+            padding: 10px 20px;
+            background-color: #007bff;
+            color: #fff;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+        }
+        .btn:hover {
+            background-color: #0056b3;
+        }
+    </style>
+</head>
+<body>
+    <h1>Sudoku Generator</h1>
+    <div class="container">
+        <table id="sudoku-grid">
+            <!-- Grille de 9x9 générée en HTML -->
+            <script>
+                const grid = document.createElement("tbody");
+                for (let i = 0; i < 9; i++) {
+                    const row = document.createElement("tr");
+                    for (let j = 0; j < 9; j++) {
+                        const cell = document.createElement("td");
+                        if (i % 3 === 0) cell.classList.add("subgrid-border");
+                        if (j % 3 === 0) cell.classList.add("subgrid-border");
+                        cell.setAttribute("data-row", i);
+                        cell.setAttribute("data-col", j);
+                        row.appendChild(cell);
+                    }
+                    grid.appendChild(row);
+                }
+                document.write(grid.outerHTML);
+            </script>
+        </table>
+        <button class="btn" onclick="fetchSudoku()">Generate Sudoku</button>
+    </div>
+
+    <script>
+        // Fonction pour récupérer et afficher le Sudoku généré
+        async function fetchSudoku() {
+            try {
+                const response = await fetch("SudokuServlet", { method: "GET" });
+                const sudoku = await response.json();
+
+                const cells = document.querySelectorAll("td");
+                for (let i = 0; i < 81; i++) {
+                    const row = Math.floor(i / 9);
+                    const col = i % 9;
+                    const value = sudoku[row][col];
+                    cells[i].textContent = value !== 0 ? value : "";
+                }
+            } catch (error) {
+                console.error("Failed to fetch Sudoku:", error);
+                alert("Error generating Sudoku. Please try again.");
+            }
+        }
+    </script>
+</body>
+</html>

@@ -4,7 +4,6 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Sudoku Generator</title>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.4.0/jspdf.umd.min.js"></script>
     <style>
         body {
             font-family: Arial, sans-serif;
@@ -34,7 +33,7 @@
             border-width: 2px;
         }
         .btn {
-            margin: 20px;
+            margin: 10px;
             padding: 10px 20px;
             background-color: #007bff;
             color: #fff;
@@ -45,23 +44,34 @@
         .btn:hover {
             background-color: #0056b3;
         }
+        .difficulty {
+            margin: 20px;
+        }
     </style>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.4.0/jspdf.umd.min.js"></script>
 </head>
 <body>
     <h1>Sudoku Generator</h1>
     <div class="container">
-        <table id="sudoku-grid">
-            <!-- Grille générée dynamiquement par JS -->
-        </table>
-        <button class="btn" onclick="generateSudoku()">Generate Sudoku</button>
+        <div class="difficulty">
+            <label for="difficulty">Select Difficulty: </label>
+            <input type="range" id="difficulty" min="1" max="100" value="50">
+            <span id="difficulty-value">50%</span>
+        </div>
+        <table id="sudoku-grid"></table>
+        <button class="btn" onclick="generateIncompleteSudoku()">Generate Puzzle</button>
+        <button class="btn" onclick="revealSolution()">Reveal Solution</button>
+        <button class="btn" onclick="generatePDF()">Download PDF</button>
     </div>
+
     <script>
         const GRID_SIZE = 9;
+        let solutionGrid = [];
+        let puzzleGrid = [];
 
-        // Génère une grille vide
         function createEmptyGrid() {
             const grid = document.getElementById("sudoku-grid");
-            grid.innerHTML = ""; // Réinitialiser
+            grid.innerHTML = "";
             for (let row = 0; row < GRID_SIZE; row++) {
                 const tr = document.createElement("tr");
                 for (let col = 0; col < GRID_SIZE; col++) {
@@ -74,14 +84,12 @@
             }
         }
 
-        // Génère une grille de Sudoku
         function generateSudoku() {
             const grid = Array.from({ length: GRID_SIZE }, () => Array(GRID_SIZE).fill(0));
             fillGrid(grid);
-            updateGridDisplay(grid);
+            return grid;
         }
 
-        // Remplit la grille en respectant les règles du Sudoku
         function fillGrid(grid) {
             function isSafe(row, col, num) {
                 for (let x = 0; x < GRID_SIZE; x++) {
@@ -115,7 +123,6 @@
             fill(0, 0);
         }
 
-        // Mélange un tableau (Fisher-Yates)
         function shuffleArray(array) {
             for (let i = array.length - 1; i > 0; i--) {
                 const j = Math.floor(Math.random() * (i + 1));
@@ -124,7 +131,34 @@
             return array;
         }
 
-        // Met à jour l'affichage de la grille
+        function generateIncompleteSudoku() {
+            solutionGrid = generateSudoku();
+            puzzleGrid = JSON.parse(JSON.stringify(solutionGrid));
+
+            const difficulty = document.getElementById("difficulty").value / 100;
+            const cellsToRemove = Math.floor(difficulty * GRID_SIZE * GRID_SIZE);
+
+            let removed = 0;
+            while (removed < cellsToRemove) {
+                const row = Math.floor(Math.random() * GRID_SIZE);
+                const col = Math.floor(Math.random() * GRID_SIZE);
+                if (puzzleGrid[row][col] !== 0) {
+                    puzzleGrid[row][col] = 0;
+                    removed++;
+                }
+            }
+
+            updateGridDisplay(puzzleGrid);
+        }
+
+        function revealSolution() {
+            if (solutionGrid.length) {
+                updateGridDisplay(solutionGrid);
+            } else {
+                alert("Please generate a puzzle first!");
+            }
+        }
+
         function updateGridDisplay(grid) {
             const rows = document.querySelectorAll("#sudoku-grid tr");
             rows.forEach((tr, rowIndex) => {
@@ -134,7 +168,51 @@
             });
         }
 
-        // Initialisation de la grille
+        function generatePDF() {
+            const { jsPDF } = window.jspdf;
+            const doc = new jsPDF();
+
+            const puzzlesCount = 5;
+            for (let i = 0; i < puzzlesCount; i++) {
+                const difficulty = document.getElementById("difficulty").value;
+                generateIncompleteSudoku();
+                drawSudoku(doc, puzzleGrid, 10, 10, `Puzzle ${i + 1} - Difficulty: ${difficulty}%`);
+                doc.addPage();
+                drawSudoku(doc, solutionGrid, 10, 10, `Solution for Puzzle ${i + 1}`);
+                if (i < puzzlesCount - 1) doc.addPage();
+            }
+
+            doc.save("SudokuBooklet.pdf");
+        }
+
+        function drawSudoku(doc, grid, startX, startY, title) {
+            const cellSize = 15;
+
+            doc.setFontSize(14);
+            doc.text(title, startX, startY - 5);
+
+            for (let row = 0; row < GRID_SIZE; row++) {
+                for (let col = 0; col < GRID_SIZE; col++) {
+                    const x = startX + col * cellSize;
+                    const y = startY + row * cellSize;
+
+                    doc.rect(x, y, cellSize, cellSize);
+                    const value = grid[row][col];
+                    if (value !== 0) {
+                        doc.text(`${value}`, x + cellSize / 2, y + cellSize / 1.5, {
+                            align: "center",
+                        });
+                    }
+                }
+            }
+        }
+
+        const difficultySlider = document.getElementById("difficulty");
+        const difficultyValue = document.getElementById("difficulty-value");
+        difficultySlider.addEventListener("input", () => {
+            difficultyValue.textContent = `${difficultySlider.value}%`;
+        });
+
         createEmptyGrid();
     </script>
 </body>

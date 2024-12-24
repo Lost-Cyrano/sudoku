@@ -5,7 +5,6 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Sudoku Generator</title>
     <style>
-        /* Styles pour la grille de Sudoku */
         body {
             font-family: Arial, sans-serif;
             text-align: center;
@@ -51,46 +50,91 @@
     <h1>Sudoku Generator</h1>
     <div class="container">
         <table id="sudoku-grid">
-            <!-- Grille de 9x9 générée en HTML -->
-            <script>
-                const grid = document.createElement("tbody");
-                for (let i = 0; i < 9; i++) {
-                    const row = document.createElement("tr");
-                    for (let j = 0; j < 9; j++) {
-                        const cell = document.createElement("td");
-                        if (i % 3 === 0) cell.classList.add("subgrid-border");
-                        if (j % 3 === 0) cell.classList.add("subgrid-border");
-                        cell.setAttribute("data-row", i);
-                        cell.setAttribute("data-col", j);
-                        row.appendChild(cell);
-                    }
-                    grid.appendChild(row);
-                }
-                document.write(grid.outerHTML);
-            </script>
+            <!-- Grille générée dynamiquement par JS -->
         </table>
-        <button class="btn" onclick="fetchSudoku()">Generate Sudoku</button>
+        <button class="btn" onclick="generateSudoku()">Generate Sudoku</button>
     </div>
-
     <script>
-        // Fonction pour récupérer et afficher le Sudoku généré
-        async function fetchSudoku() {
-            try {
-                const response = await fetch("SudokuServlet", { method: "GET" });
-                const sudoku = await response.json();
+        const GRID_SIZE = 9;
 
-                const cells = document.querySelectorAll("td");
-                for (let i = 0; i < 81; i++) {
-                    const row = Math.floor(i / 9);
-                    const col = i % 9;
-                    const value = sudoku[row][col];
-                    cells[i].textContent = value !== 0 ? value : "";
+        // Génère une grille vide
+        function createEmptyGrid() {
+            const grid = document.getElementById("sudoku-grid");
+            grid.innerHTML = ""; // Réinitialiser
+            for (let row = 0; row < GRID_SIZE; row++) {
+                const tr = document.createElement("tr");
+                for (let col = 0; col < GRID_SIZE; col++) {
+                    const td = document.createElement("td");
+                    if (row % 3 === 0 && row !== 0) td.style.borderTop = "2px solid black";
+                    if (col % 3 === 0 && col !== 0) td.style.borderLeft = "2px solid black";
+                    tr.appendChild(td);
                 }
-            } catch (error) {
-                console.error("Failed to fetch Sudoku:", error);
-                alert("Error generating Sudoku. Please try again.");
+                grid.appendChild(tr);
             }
         }
+
+        // Génère une grille de Sudoku
+        function generateSudoku() {
+            const grid = Array.from({ length: GRID_SIZE }, () => Array(GRID_SIZE).fill(0));
+            fillGrid(grid);
+            updateGridDisplay(grid);
+        }
+
+        // Remplit la grille en respectant les règles du Sudoku
+        function fillGrid(grid) {
+            function isSafe(row, col, num) {
+                for (let x = 0; x < GRID_SIZE; x++) {
+                    if (grid[row][x] === num || grid[x][col] === num || 
+                        grid[row - row % 3 + Math.floor(x / 3)][col - col % 3 + x % 3] === num) {
+                        return false;
+                    }
+                }
+                return true;
+            }
+
+            function fill(row, col) {
+                if (row === GRID_SIZE - 1 && col === GRID_SIZE) return true;
+                if (col === GRID_SIZE) {
+                    row++;
+                    col = 0;
+                }
+                if (grid[row][col] !== 0) return fill(row, col + 1);
+
+                const nums = shuffleArray(Array.from({ length: GRID_SIZE }, (_, i) => i + 1));
+                for (const num of nums) {
+                    if (isSafe(row, col, num)) {
+                        grid[row][col] = num;
+                        if (fill(row, col + 1)) return true;
+                        grid[row][col] = 0;
+                    }
+                }
+                return false;
+            }
+
+            fill(0, 0);
+        }
+
+        // Mélange un tableau (Fisher-Yates)
+        function shuffleArray(array) {
+            for (let i = array.length - 1; i > 0; i--) {
+                const j = Math.floor(Math.random() * (i + 1));
+                [array[i], array[j]] = [array[j], array[i]];
+            }
+            return array;
+        }
+
+        // Met à jour l'affichage de la grille
+        function updateGridDisplay(grid) {
+            const rows = document.querySelectorAll("#sudoku-grid tr");
+            rows.forEach((tr, rowIndex) => {
+                tr.querySelectorAll("td").forEach((td, colIndex) => {
+                    td.textContent = grid[rowIndex][colIndex] !== 0 ? grid[rowIndex][colIndex] : "";
+                });
+            });
+        }
+
+        // Initialisation de la grille
+        createEmptyGrid();
     </script>
 </body>
 </html>
